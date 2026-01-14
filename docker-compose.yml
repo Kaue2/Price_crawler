@@ -1,0 +1,55 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: pc-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672" # web
+    environment:
+      RABBITMQ_DEFAULT_USER: ${MQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${MQ_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - crawler-net
+
+  prostgres:
+    image: postgres:15-alpine
+    container_name: pc-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - crawler-net
+
+  mongodb:
+    image: mongo:6.0
+    container_name: pc-mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - crawler-net
+    
+volumes:
+  rabbitmq_data: 
+  postgres_data:
+  mongodb_data:
+
+networks:
+  crawler-net: 
+    driver: bridge  
+
+    
+    
+
+
