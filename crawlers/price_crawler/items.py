@@ -12,6 +12,7 @@ class PriceCrawlerItem(scrapy.Item):
     pass
 
 class RawHtmlItem(scrapy.Item): 
+    _id = scrapy.Field()
     name = scrapy.Field()
     url = scrapy.Field()
     html = scrapy.Field()

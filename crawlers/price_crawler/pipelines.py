@@ -10,6 +10,8 @@ class MongoRabbitPipeline():
     def __init__(self):
         mongo_user = os.getenv("MONGO_USER")
         mongo_pass = os.getenv("MONGO_PASSWORD")
+        print("MONGO USER: " + mongo_user)
+        print("MONGO PASSWORD: " + mongo_pass)
         mongo_uri = f"mongodb://{mongo_user}:{mongo_pass}@localhost:27017"
 
         self.mongo_client = pymongo.MongoClient(mongo_uri)

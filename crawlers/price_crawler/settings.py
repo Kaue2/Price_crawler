@@ -59,7 +59,7 @@ DOWNLOAD_DELAY = 1
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    "price_crawler.pipelines.PriceCrawlerPipeline": 300,
+    "price_crawler.pipelines.MongoRabbitPipeline": 300,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
