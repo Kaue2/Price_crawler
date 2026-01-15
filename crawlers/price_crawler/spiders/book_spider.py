@@ -13,5 +13,6 @@ class BookSpider(scrapy.Spider):
         item = RawHtmlItem()
         item['_id'] = spider_uuid
         item['url'] = response.url
+        item['html'] = response.text
 
         yield item

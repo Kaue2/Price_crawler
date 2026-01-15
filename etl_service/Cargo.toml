@@ -1,0 +1,24 @@
+[package]
+name = "etl_service"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# RabbitMQ
+lapin = "2.3"
+futures-lite = "1.13"
+
+# Mongo
+mongodb = "2.8"
+
+# Json
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+dotenv = "0.15"
+
+log = "0.4"
+env_logger = "0.10"
