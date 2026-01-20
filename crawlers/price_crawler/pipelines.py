@@ -20,6 +20,8 @@ class MongoRabbitPipeline():
 
         mq_user = os.getenv("MQ_USER")
         mq_password = os.getenv("MQ_PASS")
+        print("MQ USER: " + mq_user)
+        print("MQ PASSWORD: " + mq_password)
 
         credentials = pika.PlainCredentials(mq_user, mq_password)
         self.rabbit_connection = pika.BlockingConnection(
@@ -53,7 +55,7 @@ class MongoRabbitPipeline():
                 delivery_mode=2
             )
         )
-        spider.log(f"Mensagem enviada: {message['id']}")
+        spider.log(f"\n\nMensagem enviada: {message['id']}\n\n")
 
         return item
     
