@@ -19,7 +19,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 # postgres
-diesel = { version = "2.3.6", features = ["postgres"] }
+sqlx = { version = "0.8", features = [ "postgres", "runtime-tokio" ] }
 
 dotenv = "0.15"
 
