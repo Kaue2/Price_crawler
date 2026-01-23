@@ -21,7 +21,8 @@ serde_json = "1.0"
 # postgres
 uuid = { version = "1.8", features = ["v4", "fast-rng"] }
 
-sqlx = { version = "0.7", features = ["runtime-tokio", "tls-native-tls", "postgres", "uuid", "decimal"] }
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid"] }
+rust_decimal = "1.30"
 
 dotenv = "0.15"
 

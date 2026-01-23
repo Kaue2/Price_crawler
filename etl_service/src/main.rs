@@ -57,7 +57,6 @@ async fn connect_postgres() -> Result<PgPool, sqlx::Error> {
         .max_connections(5)
         .connect(&conn_str).await?;
 
-
     Ok(pool)
 }
 
@@ -98,11 +97,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(Some(document)) => {
                     println!("LOG: Documento encontrado. URL: {}", document.url);
                     let fragment = Html::parse_fragment(&document.html);
-                    let selector = Selector::parse("p.price_color").unwrap();
-                    let price_element = fragment.select(&selector).next().unwrap();
+                    let tittle_sel = Selector::parse("div.product_main > h1").unwrap();
+                    let tittle_element = fragment.select(&tittle_sel).next().unwrap();
+                    let tittle = tittle_element.inner_html();
+
+                    let price_sel = Selector::parse("p.price_color").unwrap();
+                    let price_element = fragment.select(&price_sel).next().unwrap();
                     let price = price_element.inner_html();
                     let price = price.replace("£", "");
                     let price: f64 = price.parse().expect("ERROR: falha ao converter preço do item para número.");
+
+                    println!("DEBUG: produto encontrado: {}", tittle);
                     println!("DEBUG: preço encontrado: {}", price);
                 },
                 Ok(None) => eprintln!("WARNING: documento não encontrado no mongo, ID: {}", payload.id),
