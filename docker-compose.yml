@@ -13,7 +13,7 @@ services:
     networks:
       - crawler-net
 
-  prostgres:
+  postgres:
     image: postgres:15-alpine
     container_name: pc-postgres
     ports:
@@ -24,6 +24,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - crawler-net
 
