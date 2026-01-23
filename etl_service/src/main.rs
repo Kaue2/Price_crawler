@@ -5,6 +5,7 @@ use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
 use mongodb::{Client, bson::document, options::ClientOptions};
 use scraper::{Selector, Html};
+use sqlx::{PgPool, postgres::PgPoolOptions};
 
 #[derive(Debug, Deserialize)]
 struct RabbitMessage {
@@ -33,10 +34,10 @@ async fn connect_rabbit() -> Result<lapin::Channel, lapin::Error> {
 }
 
 async fn connect_mongo() -> Result<mongodb::Collection<RawPage>, mongodb::error::Error> {
-    let mongo_user = env::var("MONGO_USER").expect("Erro: variável MONGO_USER não encontrada");
-    let mongo_pass = env::var("MONGO_PASSWORD").expect("Erro: variável MONGO_PASS não encontrada");
+    let mongo_user = env::var("MONGO_USER").expect("ERROR: variável MONGO_USER não encontrada");
+    let mongo_pass = env::var("MONGO_PASSWORD").expect("ERROR: variável MONGO_PASS não encontrada");
     let mongo_uri = format!("mongodb://{}:{}@localhost:27017", mongo_user, mongo_pass);
-    print!("LOG: Conectando ao MongoDb em: {}", mongo_uri);
+    println!("LOG: Conectando ao MongoDb em: {}", mongo_uri);
 
     let clinet_options = ClientOptions::parse(&mongo_uri).await?;
     let mongo_client = Client::with_options(clinet_options)?;
@@ -46,12 +47,27 @@ async fn connect_mongo() -> Result<mongodb::Collection<RawPage>, mongodb::error:
     Ok(collection)
 }
 
+async fn connect_postgres() -> Result<PgPool, sqlx::Error> {
+    let postgres_user = env::var("POSTGRES_USER").expect("ERROR: variável POSTGRES_USER não encontrada");
+    let postgres_pass = env::var("POSTGRES_PASSWORD").expect("ERROR: variável POSTGRES_PASSWORD não encontrada");
+    let conn_str = format!("postgres://{}:{}@localhost:5432/price_crawler_db", postgres_user, postgres_pass);
+    println!("LOG: Conectando ao Postgres em: {}", conn_str);
+
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&conn_str).await?;
+
+
+    Ok(pool)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
 
     let channel = connect_rabbit().await?;
     let collection = connect_mongo().await?;
+    let _pool = connect_postgres().await?;
 
     // criando uma stream (pipe para comunicação)
     let mut consumer = channel
