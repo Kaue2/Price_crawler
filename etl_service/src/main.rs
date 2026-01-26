@@ -3,7 +3,7 @@ use lapin::{options::*, types::FieldTable, Connection, ConnectionProperties};
 use futures_lite::stream::StreamExt;
 use rust_decimal::Decimal;
 use core::fmt;
-use std::{env, str::FromStr};
+use std::{env, fmt::format, str::FromStr};
 use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
 use mongodb::{Client, options::ClientOptions};
@@ -37,6 +37,22 @@ impl fmt::Display for Item {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { 
         write!(f, "Id: {}\ntitle: {}\nValue: {} \nUrl: {} \nCriado em: {}", 
         &self.id, &self.title, &self.value, &self.url, &self.created_at)
+    }
+}
+
+struct SiteRules {
+    title_selector: String,
+    price_selector: String,
+}
+
+fn get_site_rules(url: &str) -> Result<SiteRules, String> {
+    if url.contains("kabum.com.br") {
+        Ok(SiteRules { 
+            title_selector: "h1".to_string(), 
+            price_selector: "h4".to_string(),
+        })
+    } else {
+        Err(format!("Site não suportado: {}", url))
     }
 }
 
@@ -77,10 +93,12 @@ async fn connect_postgres() -> Result<PgPool, sqlx::Error> {
 }
 
 fn extract_data(document: RawPage, url: &String) -> Result<Item, String>{
-     println!("LOG: Documento encontrado. URL: {}", document.url);
+    let rules = get_site_rules(url)?;
+
+    println!("LOG: Documento encontrado. URL: {}", document.url);
     let fragment = Html::parse_fragment(&document.html);
     
-    let title_sel = Selector::parse("div.product_main > h1")
+    let title_sel = Selector::parse(&rules.title_selector)
         .map_err(|_| "ERROR: falha ao buscar pelo seletor do título")?;
 
     let title = fragment.select(&title_sel)
@@ -88,7 +106,7 @@ fn extract_data(document: RawPage, url: &String) -> Result<Item, String>{
         .map(|el| el.text().collect::<String>())
         .ok_or("ERROR: elemento Título não encontrado")?;
 
-    let price_sel = Selector::parse("p.price_color")
+    let price_sel = Selector::parse(&rules.price_selector)
         .map_err(|_| "ERROR: falha ao buscar pelo seletor do preço")?;
 
     let price = fragment.select(&price_sel)
@@ -96,13 +114,21 @@ fn extract_data(document: RawPage, url: &String) -> Result<Item, String>{
         .map(|el| el.text().collect::<String>())
         .ok_or("ERROR: elemento preço não encontrado")?;
 
-    let price = price.replace("£", "");
-    let price = Decimal::from_str(&price).unwrap_or(Decimal::ZERO);
+    let price_clean = price
+        .replace("R$", "")
+        .replace(" ", "")
+        .replace(".", "")
+        .replace(",", ".")
+        .replace("&nbsp;", "");
+
+
+    let price_clean = price_clean.trim();
+    let value = Decimal::from_str(&price_clean).unwrap_or(Decimal::ZERO);
 
     let item = Item{
         id:Uuid::new_v4(), 
         title: title, 
-        value: price, 
+        value: value, 
         url: url.clone(),
         created_at: chrono::Utc::now().naive_utc(),
     };
