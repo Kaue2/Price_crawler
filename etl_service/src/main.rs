@@ -67,9 +67,7 @@ async fn connect_mongo() -> Result<mongodb::Collection<RawPage>, mongodb::error:
 }
 
 async fn connect_postgres() -> Result<PgPool, sqlx::Error> {
-    let postgres_user = env::var("POSTGRES_USER").expect("ERROR: variável POSTGRES_USER não encontrada");
-    let postgres_pass = env::var("POSTGRES_PASSWORD").expect("ERROR: variável POSTGRES_PASSWORD não encontrada");
-    let conn_str = format!("postgres://{}:{}@localhost:5432/price_crawler_db", postgres_user, postgres_pass);
+    let conn_str = env::var("DATABASE_URL").expect("ERROR: variável POSTGRES_USER não encontrada");
     println!("LOG: Conectando ao Postgres em: {}", conn_str);
 
     let pool = PgPoolOptions::new()
@@ -112,19 +110,38 @@ fn extract_data(document: RawPage, url: &String) -> Result<Item, String>{
     return Ok(item);
 }
 
+async fn save_item(pool: &PgPool, item: &Item) -> Result<(), sqlx::Error>{
+    sqlx::query!(
+        r#"
+        INSERT INTO prices (id, title, value, url, created_at)
+        VALUES ($1, $2, $3, $4, $5)
+        "#,
+        item.id,
+        item.title,
+        item.value,
+        item.url,
+        item.created_at
+    )
+    .execute(pool)
+    .await?;
+    
+    
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
 
     let channel = connect_rabbit().await?;
     let collection = connect_mongo().await?;
-    let _pool = connect_postgres().await?;
+    let pool = connect_postgres().await?;
 
     // criando uma stream (pipe para comunicação)
     let mut consumer = channel
         .basic_consume(
             "raw_prices",
-            "my_consumer_tag",
+            "rust_worker",
             BasicConsumeOptions::default(), 
             FieldTable::default(),
         ).await?;
@@ -147,14 +164,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             match collection.find_one(filter, None).await {
                 Ok(Some(document)) => {
-                   let item: Item = extract_data(document, &payload.url)?;
-                   println!("DEBUG: item extraido: \n{}", item);
+                   match extract_data(document, &payload.url) {
+                       Ok(item) => {
+                        println!("DEBUG: item extraido: \n{}", item);
+                        match save_item(&pool, &item).await {
+                            Ok(_) => println!("DEBUG: sucesso ao salvar item no postgres.\n"),
+                            Err(e) => eprint!("ERROR: falha ao salvar item no postgres: {}", e)
+                        }
+                       },
+                       Err(e) => eprint!("ERROR: falha ao extrair item da URL: {} {}", payload.url, e)
+                   }
                 },
                 Ok(None) => eprintln!("WARNING: documento não encontrado no mongo, ID: {}", payload.id),
                 Err(e) => eprintln!("ERROR: falha de conexão com Mongo: {}", e),
             }
 
-            //processamento
+            // confirma processamento
             delivery.ack(BasicAckOptions::default()).await?;
         }
     };
