@@ -1,11 +1,15 @@
+use chrono::NaiveDateTime;
 use lapin::{options::*, types::FieldTable, Connection, ConnectionProperties};
 use futures_lite::stream::StreamExt;
-use std::env;
+use rust_decimal::Decimal;
+use core::fmt;
+use std::{env, str::FromStr};
 use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
-use mongodb::{Client, bson::document, options::ClientOptions};
+use mongodb::{Client, options::ClientOptions};
 use scraper::{Selector, Html};
 use sqlx::{PgPool, postgres::PgPoolOptions};
+use uuid::{Uuid};
 
 #[derive(Debug, Deserialize)]
 struct RabbitMessage {
@@ -19,6 +23,21 @@ struct RawPage {
     id: String,
     url: String,
     html: String,
+}
+
+struct Item {
+    id: Uuid,
+    title: String,
+    value: Decimal,
+    url: String,
+    created_at: NaiveDateTime,
+}
+
+impl fmt::Display for Item {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { 
+        write!(f, "Id: {}\ntitle: {}\nValue: {} \nUrl: {} \nCriado em: {}", 
+        &self.id, &self.title, &self.value, &self.url, &self.created_at)
+    }
 }
 
 async fn connect_rabbit() -> Result<lapin::Channel, lapin::Error> {
@@ -56,8 +75,41 @@ async fn connect_postgres() -> Result<PgPool, sqlx::Error> {
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&conn_str).await?;
-
     Ok(pool)
+}
+
+fn extract_data(document: RawPage, url: &String) -> Result<Item, String>{
+     println!("LOG: Documento encontrado. URL: {}", document.url);
+    let fragment = Html::parse_fragment(&document.html);
+    
+    let title_sel = Selector::parse("div.product_main > h1")
+        .map_err(|_| "ERROR: falha ao buscar pelo seletor do título")?;
+
+    let title = fragment.select(&title_sel)
+        .next()
+        .map(|el| el.text().collect::<String>())
+        .ok_or("ERROR: elemento Título não encontrado")?;
+
+    let price_sel = Selector::parse("p.price_color")
+        .map_err(|_| "ERROR: falha ao buscar pelo seletor do preço")?;
+
+    let price = fragment.select(&price_sel)
+        .next()
+        .map(|el| el.text().collect::<String>())
+        .ok_or("ERROR: elemento preço não encontrado")?;
+
+    let price = price.replace("£", "");
+    let price = Decimal::from_str(&price).unwrap_or(Decimal::ZERO);
+
+    let item = Item{
+        id:Uuid::new_v4(), 
+        title: title, 
+        value: price, 
+        url: url.clone(),
+        created_at: chrono::Utc::now().naive_utc(),
+    };
+
+    return Ok(item);
 }
 
 #[tokio::main]
@@ -93,22 +145,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // query em mongo
             let filter = mongodb::bson::doc! {"_id": &payload.id};
 
-            match collection.find_one(filter).await {
+            match collection.find_one(filter, None).await {
                 Ok(Some(document)) => {
-                    println!("LOG: Documento encontrado. URL: {}", document.url);
-                    let fragment = Html::parse_fragment(&document.html);
-                    let tittle_sel = Selector::parse("div.product_main > h1").unwrap();
-                    let tittle_element = fragment.select(&tittle_sel).next().unwrap();
-                    let tittle = tittle_element.inner_html();
-
-                    let price_sel = Selector::parse("p.price_color").unwrap();
-                    let price_element = fragment.select(&price_sel).next().unwrap();
-                    let price = price_element.inner_html();
-                    let price = price.replace("£", "");
-                    let price: f64 = price.parse().expect("ERROR: falha ao converter preço do item para número.");
-
-                    println!("DEBUG: produto encontrado: {}", tittle);
-                    println!("DEBUG: preço encontrado: {}", price);
+                   let item: Item = extract_data(document, &payload.url)?;
+                   println!("DEBUG: item extraido: \n{}", item);
                 },
                 Ok(None) => eprintln!("WARNING: documento não encontrado no mongo, ID: {}", payload.id),
                 Err(e) => eprintln!("ERROR: falha de conexão com Mongo: {}", e),
