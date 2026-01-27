@@ -3,7 +3,7 @@ use lapin::{options::*, types::FieldTable, Connection, ConnectionProperties};
 use futures_lite::stream::StreamExt;
 use rust_decimal::Decimal;
 use core::fmt;
-use std::{env, fmt::format, str::FromStr};
+use std::{env, str::FromStr};
 use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
 use mongodb::{Client, options::ClientOptions};
@@ -25,19 +25,34 @@ struct RawPage {
     html: String,
 }
 
-struct Item {
+struct Price_hisotry {
     id: Uuid,
-    title: String,
+    product_id: Uuid,
     value: Decimal,
+    created_at: NaiveDateTime
+}
+
+impl fmt::Display for Price_hisotry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Price History: \nID: {} \nProduct ID: {} \nLast checked Price: {} \nChecked At: {}",
+        &self.id, &self.product_id, &self.value, &self.created_at
+    )}
+}
+
+struct Product {
+    id: Uuid,
     url: String,
+    title: String,
+    store: String,
+    last_checked_at: NaiveDateTime,
     created_at: NaiveDateTime,
 }
 
-impl fmt::Display for Item {
+impl fmt::Display for Product {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { 
-        write!(f, "Id: {}\ntitle: {}\nValue: {} \nUrl: {} \nCriado em: {}", 
-        &self.id, &self.title, &self.value, &self.url, &self.created_at)
-    }
+        write!(f, "Product {}: \nID: {} \nUrl: {} \nStore: {} \nLast Checked At: {} \nCreated At: {}", 
+        &self.title, &self.id, &self.url, &self.store, &self.last_checked_at, &self.created_at
+    )}
 }
 
 struct SiteRules {
