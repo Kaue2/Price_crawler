@@ -1,4 +1,4 @@
-use chrono::NaiveDateTime;
+use chrono::{NaiveDateTime, Utc};
 use lapin::{options::*, types::FieldTable, Connection, ConnectionProperties};
 use futures_lite::stream::StreamExt;
 use rust_decimal::Decimal;
@@ -113,7 +113,7 @@ async fn connect_postgres() -> Result<PgPool, sqlx::Error> {
     Ok(pool)
 }
 
-fn extract_kabum(document: RawPage) -> Result<Product, String>{
+fn extract_kabum(document: RawPage) -> Result<(Product, PriceHisotry), String> {
     let rules = get_site_rules(&document.url)?;
     let fragment = Html::parse_fragment(&document.html);
     
@@ -144,7 +144,7 @@ fn extract_kabum(document: RawPage) -> Result<Product, String>{
     let price_clean = price_clean.trim();
     let value = Decimal::from_str(&price_clean).unwrap_or(Decimal::ZERO);
 
-    let product = Product{
+    let product = Product {
         id:Uuid::new_v4(), 
         title: title, 
         store: "kabum".to_string(),
@@ -153,7 +153,14 @@ fn extract_kabum(document: RawPage) -> Result<Product, String>{
         created_at: chrono::Utc::now().naive_utc(),
     };
 
-    return Ok(product);
+    let price_chapter = PriceHisotry {
+        id:Uuid::new_v4(),
+        product_id:Uuid::nil(),
+        value:value,
+        created_at:chrono::Utc::now().naive_utc(),
+    };
+
+    return Ok((product, price_chapter));
 }
 
 fn detect_store(url: &str) -> StoreType {
@@ -172,7 +179,7 @@ fn detect_store_string(url: &str) -> String {
     }
 }
 
-async fn save_product(pool: &PgPool, product: &Product) -> Result<Uuid, sqlx::Error>{
+async fn save_product(pool: &PgPool, product: &Product) -> Result<Uuid, sqlx::Error> {
     let product_record = sqlx::query!(
         r#"
         INSERT INTO products (url, title, store, last_checked_at)
@@ -192,6 +199,23 @@ async fn save_product(pool: &PgPool, product: &Product) -> Result<Uuid, sqlx::Er
     .await?;
 
     Ok(product_record.id)
+}
+
+async fn save_price_history(pool: &PgPool, price_chapter: PriceHisotry) -> Result<(), sqlx::error::Error>{
+    sqlx::query!(
+        r#"
+        INSERT INTO price_history (product_id, value, created_at)
+        VALUES ($1, $2, $3)
+        "#,
+        price_chapter.id,
+        price_chapter.value,
+        price_chapter.created_at
+    )
+    .execute(pool)
+    .await?;
+
+    println!("Histórico do produto ID: {} criado", price_chapter.product_id);
+    Ok(())
 }
 
 #[tokio::main]
@@ -238,7 +262,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     
                     match result {
                         Ok(product) => {
-                            match save_product(&pool, &product).await {
+                            match save_product(&pool, &product.0).await {
                                 Ok(product_id) => {},
                                 Err(_) => {}
                             }
