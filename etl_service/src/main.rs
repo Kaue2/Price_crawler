@@ -11,6 +11,7 @@ use scraper::{Selector, Html};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use uuid::{Uuid};
 
+
 #[derive(Debug, Deserialize)]
 struct RabbitMessage {
     id: String,
@@ -25,14 +26,19 @@ struct RawPage {
     html: String,
 }
 
-struct Price_hisotry {
+enum StoreType {
+    Kabum,
+    Unknown,
+}
+
+struct PriceHisotry {
     id: Uuid,
     product_id: Uuid,
     value: Decimal,
     created_at: NaiveDateTime
 }
 
-impl fmt::Display for Price_hisotry {
+impl fmt::Display for PriceHisotry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Price History: \nID: {} \nProduct ID: {} \nLast checked Price: {} \nChecked At: {}",
         &self.id, &self.product_id, &self.value, &self.created_at
@@ -107,10 +113,8 @@ async fn connect_postgres() -> Result<PgPool, sqlx::Error> {
     Ok(pool)
 }
 
-fn extract_data(document: RawPage, url: &String) -> Result<Item, String>{
-    let rules = get_site_rules(url)?;
-
-    println!("LOG: Documento encontrado. URL: {}", document.url);
+fn extract_kabum(document: RawPage) -> Result<Product, String>{
+    let rules = get_site_rules(&document.url)?;
     let fragment = Html::parse_fragment(&document.html);
     
     let title_sel = Selector::parse(&rules.title_selector)
@@ -140,34 +144,54 @@ fn extract_data(document: RawPage, url: &String) -> Result<Item, String>{
     let price_clean = price_clean.trim();
     let value = Decimal::from_str(&price_clean).unwrap_or(Decimal::ZERO);
 
-    let item = Item{
+    let product = Product{
         id:Uuid::new_v4(), 
         title: title, 
-        value: value, 
-        url: url.clone(),
+        store: "kabum".to_string(),
+        url: document.url,
+        last_checked_at: chrono::Utc::now().naive_utc(),
         created_at: chrono::Utc::now().naive_utc(),
     };
 
-    return Ok(item);
+    return Ok(product);
 }
 
-async fn save_item(pool: &PgPool, item: &Item) -> Result<(), sqlx::Error>{
-    sqlx::query!(
+fn detect_store(url: &str) -> StoreType {
+    if url.contains("kabum.com.br") {
+        return StoreType::Kabum;
+    } else {
+        return StoreType::Unknown;
+    }
+}
+
+fn detect_store_string(url: &str) -> String {
+    if url.contains("kabum.com.br") {
+        return "kabum".to_string();
+    } else {
+        return "unknown".to_string();
+    }
+}
+
+async fn save_product(pool: &PgPool, product: &Product) -> Result<Uuid, sqlx::Error>{
+    let product_record = sqlx::query!(
         r#"
-        INSERT INTO prices (id, title, value, url, created_at)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO products (url, title, store, last_checked_at)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (url)
+        DO UPDATE SET 
+            last_checked_at = EXCLUDED.last_checked_at,
+            title = EXCLUDED.title
+        RETURNING id
         "#,
-        item.id,
-        item.title,
-        item.value,
-        item.url,
-        item.created_at
+        product.url,
+        product.title,
+        detect_store_string(&product.url),
+        product.created_at
     )
-    .execute(pool)
+    .fetch_one(pool)
     .await?;
-    
-    
-    Ok(())
+
+    Ok(product_record.id)
 }
 
 #[tokio::main]
@@ -205,18 +229,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             match collection.find_one(filter, None).await {
                 Ok(Some(document)) => {
-                   match extract_data(document, &payload.url) {
-                       Ok(item) => {
-                        println!("DEBUG: item extraido: \n{}", item);
-                        match save_item(&pool, &item).await {
-                            Ok(_) => println!("DEBUG: sucesso ao salvar item no postgres.\n"),
-                            Err(e) => eprint!("ERROR: falha ao salvar item no postgres: {}", e)
-                        }
-                       },
-                       Err(e) => eprint!("ERROR: falha ao extrair item da URL: {} {}", payload.url, e)
-                   }
+                    println!("LOG: Documento encontrado. URL: {}", document.url);
+
+                    let result = match detect_store(&document.url) {
+                        StoreType::Kabum => extract_kabum(document),
+                        StoreType::Unknown => Err(format!("Loja não suportada ou desconhecida: {}", document.url))
+                    };
+                    
+                    match result {
+                        Ok(product) => {
+                            match save_product(&pool, &product).await {
+                                Ok(product_id) => {},
+                                Err(_) => {}
+                            }
+                        },
+                        Err(_) => {}
+                    }
                 },
-                Ok(None) => eprintln!("WARNING: documento não encontrado no mongo, ID: {}", payload.id),
+                Ok(None) => eprintln!("WARNING: documento não encontrado no mongo, ID: {}", payload.url),
                 Err(e) => eprintln!("ERROR: falha de conexão com Mongo: {}", e),
             }
 
