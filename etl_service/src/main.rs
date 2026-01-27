@@ -1,4 +1,4 @@
-use chrono::{NaiveDateTime, Utc};
+use chrono::{NaiveDateTime};
 use lapin::{options::*, types::FieldTable, Connection, ConnectionProperties};
 use futures_lite::stream::StreamExt;
 use rust_decimal::Decimal;
@@ -201,13 +201,13 @@ async fn save_product(pool: &PgPool, product: &Product) -> Result<Uuid, sqlx::Er
     Ok(product_record.id)
 }
 
-async fn save_price_history(pool: &PgPool, price_chapter: PriceHisotry) -> Result<(), sqlx::error::Error>{
+async fn save_price_history(pool: &PgPool, price_chapter: &PriceHisotry, product_id: Uuid) -> Result<(), sqlx::error::Error>{
     sqlx::query!(
         r#"
         INSERT INTO price_history (product_id, value, created_at)
         VALUES ($1, $2, $3)
         "#,
-        price_chapter.id,
+        product_id,
         price_chapter.value,
         price_chapter.created_at
     )
@@ -261,13 +261,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     };
                     
                     match result {
-                        Ok(product) => {
-                            match save_product(&pool, &product.0).await {
-                                Ok(product_id) => {},
-                                Err(_) => {}
+                        Ok((product, price_chapter)) => {
+                            match save_product(&pool, &product).await {
+                                Ok(product_id) => {
+                                    match save_price_history(&pool, &price_chapter, product_id).await {
+                                        Ok(()) => {
+                                            println!("DEBUG: Sucesso ao salvar o preço: {}", price_chapter);
+                                        },
+                                        Err(e) =>{
+                                            eprintln!("ERROR: falha ao salvar o histórico do produto: {}", e);
+                                        }
+                                    }
+                                },
+                                Err(e) => {
+                                    eprintln!("ERROR: falha ao salvar/atualizar produto: {}", e);
+                                }
                             }
                         },
-                        Err(_) => {}
+                        Err(e) => {
+                            eprintln!("ERROR: falha ao buscar pela loja desejada: {}", e);
+                        }
                     }
                 },
                 Ok(None) => eprintln!("WARNING: documento não encontrado no mongo, ID: {}", payload.url),
