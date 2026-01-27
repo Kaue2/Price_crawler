@@ -155,7 +155,7 @@ fn extract_kabum(document: RawPage) -> Result<(Product, PriceHisotry), String> {
 
     let price_chapter = PriceHisotry {
         id:Uuid::new_v4(),
-        product_id:Uuid::nil(),
+        product_id:product.id,
         value:value,
         created_at:chrono::Utc::now().naive_utc(),
     };
