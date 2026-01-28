@@ -257,7 +257,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     let result = match detect_store(&document.url) {
                         StoreType::Kabum => extract_kabum(document),
-                        StoreType::Unknown => Err(format!("Loja não suportada ou desconhecida: {}", document.url))
+                        StoreType::Unknown => Err(format!("ERROR: Loja não suportada ou desconhecida: {}", document.url))
                     };
                     
                     match result {
