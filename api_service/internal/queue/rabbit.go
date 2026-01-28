@@ -28,3 +28,8 @@ func NewRabbitMQConnection(connString string) (*RabbitMQ, error){
 
 	return rabbitMQClient, nil;
 }
+
+func (r *RabbitMQ) Close() {
+	r.conn.Close()
+	r.channel.Close()
+}
