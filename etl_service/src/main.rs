@@ -178,18 +178,19 @@ fn detect_store_string(url: &str) -> String {
 async fn save_product(pool: &PgPool, product: &Product) -> Result<Uuid, sqlx::Error> {
     let product_record = sqlx::query!(
         r#"
-        INSERT INTO products (url, title, store, last_checked_at)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO products (id, url, title, store, last_checked_at)
+        VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT (url)
         DO UPDATE SET 
             last_checked_at = EXCLUDED.last_checked_at,
             title = EXCLUDED.title
         RETURNING id
         "#,
+        product.id,
         product.url,
         product.title,
         detect_store_string(&product.url),
-        product.created_at
+        product.last_checked_at
     )
     .fetch_one(pool)
     .await?;
@@ -200,9 +201,10 @@ async fn save_product(pool: &PgPool, product: &Product) -> Result<Uuid, sqlx::Er
 async fn save_price_history(pool: &PgPool, price_chapter: &PriceHisotry, product_id: Uuid) -> Result<(), sqlx::error::Error>{
     sqlx::query!(
         r#"
-        INSERT INTO price_history (product_id, value, created_at)
-        VALUES ($1, $2, $3)
+        INSERT INTO price_history (id, product_id, value, created_at)
+        VALUES ($1, $2, $3, $4)
         "#,
+        price_chapter.id,
         product_id,
         price_chapter.value,
         price_chapter.created_at
