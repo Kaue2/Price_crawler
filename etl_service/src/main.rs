@@ -78,24 +78,20 @@ fn get_site_rules(url: &str) -> Result<SiteRules, String> {
 }
 
 async fn connect_rabbit() -> Result<lapin::Channel, lapin::Error> {
-    let mq_user = env::var("MQ_USER").expect("Erro: variável MQ_USER não encontrada");
-    let mq_password = env::var("MQ_PASS").expect("Erro: variável MQ_PASS não encontrada");
-    let rabbit_addr = format!("amqp://{}:{}@localhost:5672/%2f", mq_user, mq_password);
-    println!("LOG: Conectado ao Rabbit em: {}", rabbit_addr);
+    let conn_str = env::var("MQ_CONNECTION").expect("ERROR: variável MQ_CONNECTION não encontrada");
+    println!("LOG: Conectado ao Rabbit em: {}", conn_str);
 
-    let conn = Connection::connect(&rabbit_addr, ConnectionProperties::default()).await?;
+    let conn = Connection::connect(&conn_str, ConnectionProperties::default()).await?;
     let channel = conn.create_channel().await?;
 
     Ok(channel)
 }
 
 async fn connect_mongo() -> Result<mongodb::Collection<RawPage>, mongodb::error::Error> {
-    let mongo_user = env::var("MONGO_USER").expect("ERROR: variável MONGO_USER não encontrada");
-    let mongo_pass = env::var("MONGO_PASSWORD").expect("ERROR: variável MONGO_PASS não encontrada");
-    let mongo_uri = format!("mongodb://{}:{}@localhost:27017", mongo_user, mongo_pass);
-    println!("LOG: Conectando ao MongoDb em: {}", mongo_uri);
+    let mongo_conn = env::var("MONGO_CONNECTION").expect("ERROR: variável MONGO_CONNECTION não encontrada");
+    println!("LOG: Conectando ao MongoDb em: {}", mongo_conn);
 
-    let clinet_options = ClientOptions::parse(&mongo_uri).await?;
+    let clinet_options = ClientOptions::parse(&mongo_conn).await?;
     let mongo_client = Client::with_options(clinet_options)?;
     let db = mongo_client.database("crawler_db");
     let collection = db.collection::<RawPage>("raw_pages");
