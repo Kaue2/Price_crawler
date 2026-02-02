@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
+	"price-crawler-api/internal/api"
 	"price-crawler-api/internal/database"
 	"price-crawler-api/internal/queue"
 
@@ -38,10 +40,20 @@ func main() {
 	log.Println("DEBUG: conexão com postgre estabelecida")
 	log.Println("DEBUG: conexão com rabbit estabelecida")
 
-	products, err := store.GetAll()
-	if err != nil {
-		log.Fatalf("ERROR: falha ao buscar por todos os produtos: %s\n", err)
+	handler := api.NewHandler(store, rabbit)
+	log.Println("DEBUG: Handler criado")
+
+	router := handler.RegisterRoutes() // mux personalizado
+	port := ":8080"
+
+	log.Println("DEBUG: subindo servidor...")
+
+	server := &http.Server{
+		Addr: port,
+		Handler: router,
 	}
 
-	log.Printf("DEBUG: todos os produtos encontrados: \n\n%v\n", products)
+	if err := server.ListenAndServe(); err != nil {
+		panic(err)
+	}
 }
