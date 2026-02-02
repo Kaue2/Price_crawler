@@ -37,4 +37,11 @@ func main() {
 
 	log.Println("DEBUG: conexão com postgre estabelecida")
 	log.Println("DEBUG: conexão com rabbit estabelecida")
+
+	products, err := store.GetAll()
+	if err != nil {
+		log.Fatalf("ERROR: falha ao buscar por todos os produtos: %s\n", err)
+	}
+
+	log.Printf("DEBUG: todos os produtos encontrados: \n\n%v\n", products)
 }

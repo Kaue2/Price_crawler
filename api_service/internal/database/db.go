@@ -1,8 +1,11 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"price-crawler-api/internal/models"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -29,4 +32,35 @@ func NewStore(connString string) (*Store, error) {
 
 func (s *Store) Close() {
 	s.db.Close()
+}
+
+func (s *Store) GetAll() ([]models.Product, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
+	defer cancel()
+	
+	query := `
+					SELECT * FROM products
+	`
+	rows, err := s.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("ERROR: falha ao buscar pelos produtos: %w", err)
+	}
+	defer rows.Close()
+
+	var products []models.Product
+	for rows.Next() {
+		var prod models.Product
+		if err := rows.Scan(
+			&prod.Id, &prod.Url, &prod.Title, &prod.Store, 
+			&prod.Last_checked_at, &prod.Created_at); err!= nil {
+				return products, err
+			}
+			products = append(products, prod)
+	}
+
+	if err = rows.Err(); err != nil {
+		return products, err
+	}
+
+	return products, nil
 }
