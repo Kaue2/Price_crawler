@@ -6,21 +6,39 @@ from scrapy_playwright.page import PageMethod
 class KabumSpider(scrapy.Spider):
   name = "kabum"
 
-  def start_requests(self):
-    url = "https://www.kabum.com.br/hardware/placa-de-video-vga?page_number=1&page_size=20&facet_filters=&sort=most_searched"
+  start_urls = ["https://www.kabum.com.br/produto/934759/console-sony-playstation-5-com-leitor-de-discos-ssd-1tb-controle-sem-fio-dualsense-2-jogos"]
 
-    yield scrapy.Request(
-      url,
-      meta={
-        "playwright": True,
-        "playwright_page_methods": [
-          PageMethod("wait_for_selector", "main a[href*='/produto/']")
-        ],
-                
-        "playwright_include_page": True,
-      },
-      callback=self.parse
-    )
+  def start_requests(self):
+    target_url = getattr(self, 'target_url', None)
+
+    if target_url:
+      yield scrapy.Request(
+        url=url,
+        meta={
+          "playwright": True,
+          "playwright_page_methods": [
+            PageMethod("wait_for_selector", "h1")
+          ]
+        },
+        callback=self.parse_product
+      )
+
+    else:
+      if hasattr(self, 'start_urls'):
+        for url in self.start_urls:
+          yield scrapy.Request(
+            url=url,
+            meta={
+              "playwright": True,
+              "playwright_page_methods": [
+                PageMethod("wait_for_selector", "h1")
+              ]
+            },
+            callback=self.parse_product
+          )
+
+      else: 
+        self.logger.warning("nenhuma url fornecida!")
 
   
   async def parse(self, response):
