@@ -1,30 +1,28 @@
-import { Link, Route, Routes } from 'react-router'
-import Login  from './components/login'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import Login from './pages/login/loginPage'
+import Produtos from './components/produtos'
+import Wishlist from './components/wishlist'
 
 import './App.css'
+import ProductDetails from './components/produto_detalhe'
 
 function App() {
   return (
     <>
-      <h1 className="text-white">Price Crawler</h1>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          
 
-      <Navigation />
-      <Routes>
-        <Route >
-          <Route index element={<Login />} />
-          <Route path='users' element />  
-        </Route>
-      </Routes>
+          <Route path="/app">
+            <Route index element={<Navigate to="produtos" />} />
+            <Route path="produtos" element={<Produtos />} />
+            <Route path="wishlist" element={<Wishlist />} />
+            <Route path="produto/:id" element={<ProductDetails />} />
+          </Route>
+
+          <Route path='*' element={<Navigate to="/login" />} />
+        </Routes>
     </>
-  )
-}
-
-function Navigation() {
-  return (
-    <nav className="border border-solid pb-4">
-      <Link to="/login">login</Link>
-      <Link to="/users">Users</Link>
-    </nav>
   )
 }
 
