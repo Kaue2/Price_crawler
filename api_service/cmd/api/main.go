@@ -7,6 +7,7 @@ import (
 	"price-crawler-api/internal/api"
 	"price-crawler-api/internal/database"
 	"price-crawler-api/internal/queue"
+	"price-crawler-api/internal/utils"
 
 	"github.com/joho/godotenv"
 )
@@ -43,14 +44,18 @@ func main() {
 	handler := api.NewHandler(store, rabbit)
 	log.Println("DEBUG: Handler criado")
 
+	
 	router := handler.RegisterRoutes() // mux personalizado
 	port := ":8080"
+	
+	corsHandler := utils.EnableCORS(router)
+	log.Println("DEBUG: Cors configurado")
 
 	log.Println("DEBUG: subindo servidor...")
 
 	server := &http.Server{
 		Addr: port,
-		Handler: router,
+		Handler: corsHandler,
 	}
 
 	if err := server.ListenAndServe(); err != nil {
