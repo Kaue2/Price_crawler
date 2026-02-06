@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"os"
 	"price-crawler-api/internal/api"
-	"price-crawler-api/internal/database"
-	"price-crawler-api/internal/queue"
-	"price-crawler-api/internal/utils"
+	"price-crawler-api/internal/services/database"
+	"price-crawler-api/internal/services/queue"
+	"price-crawler-api/internal/services/utils"
 
 	"github.com/joho/godotenv"
 )

@@ -3,8 +3,8 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"price-crawler-api/internal/database"
-	"price-crawler-api/internal/queue"
+	"price-crawler-api/internal/services/database"
+	"price-crawler-api/internal/services/queue"
 )
 
 type Handler struct {
