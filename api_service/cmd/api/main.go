@@ -44,11 +44,10 @@ func main() {
 	userService := services.NewUserService(store)
 	log.Println("DEBUG: User Service criado")
 
-	handler := api.NewHandler(store, rabbit, userService)
-	log.Println("DEBUG: Handler criado")
-
+	userHandler := api.NewUserHandler(userService)
+	log.Println("DEBUG: user hanlder criado")
 	
-	router := handler.RegisterRoutes() // mux personalizado
+	router := api.RegisterRoutes(userHandler) // mux personalizado
 	port := ":8080"
 	
 	corsHandler := utils.EnableCORS(router)
