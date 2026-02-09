@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEventHandler } from "react";
 
 export function AppTitle() {
   return(
@@ -57,27 +57,27 @@ export function InputForm({ text, type, action }: InputOptions) {
 }
 
 interface FormProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export function Form({ children }: FormProps){
   return(
-    <div className="flex flex-col items-center gap-8 rounded-md
+    <form className="flex flex-col items-center gap-8 rounded-md
     bg-[#F8F8F8] px-5 py-12 ">
       {children}      
-    </div>
+    </form>
   )
 }
 
 interface BtnFormProps{
   text: string;
-  action: () => void;
+  action: MouseEventHandler<HTMLButtonElement>;
 }
 
 export function BtnForm({ text, action }: BtnFormProps){
   return(
     <>
-      <button onClick={() =>  action()}
+      <button onClick={action}
         className="bg-black text-white rounded-md
         py-4 w-full text-center">{text}</button>
     </>

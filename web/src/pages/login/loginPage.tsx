@@ -1,17 +1,33 @@
 import { AppTitle, SwitchSigns, InputForm, Form, BtnForm } from "../../components/login";
-import { useState } from "react";
+import React, { useState } from "react";
+import { authService } from "../../services/authService";
 
 function Login() {
   const [activeTab, setActiveTab] = useState<"signIn" | "signUp">("signIn");
   const [userEmail, setUserEmail] = useState("");
   const [userPassword, setUserPassword] = useState("");
 
-  function ConfirmLogin() {
-    if (userEmail == "" || !userEmail.includes("@")) return;
-    if (userPassword == "") return;
+  const isValidEmail = (email: string) => {
+    return /\S+@\S+\.\S+/.test(email);
+  }
 
-    console.log(userEmail);
-    console.log(userPassword);
+  const handleRegistar = async (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    if (!isValidEmail(userEmail)) {
+      return;
+    }
+
+    try {
+      await authService.register({
+        email: userEmail,
+        password_plain: userPassword
+      });
+    } catch (err) {
+      console.error(err)
+    } finally {
+      console.log("Usuário criado");
+    }
   }
 
 
@@ -23,7 +39,7 @@ function Login() {
         <h2 className="text-3xl">Bem vindo de volta!</h2>
         <InputForm text="exemplo@gmail.com" type="email" action={setUserEmail} />
         <InputForm text="password" type="password" action={setUserPassword} />
-        <BtnForm text="Sign In" action={ConfirmLogin} />
+        <BtnForm text="Sign In" action={handleRegistar} />
       </Form>
     </div>
   )
