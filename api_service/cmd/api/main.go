@@ -8,6 +8,7 @@ import (
 	"price-crawler-api/internal/services/database"
 	"price-crawler-api/internal/services/queue"
 	"price-crawler-api/internal/services/utils"
+	"price-crawler-api/internal/services"
 
 	"github.com/joho/godotenv"
 )
@@ -31,17 +32,19 @@ func main() {
 		log.Fatalf("ERROR: falha ao conectar com Postgre: %s\n", err)
 	}
 	defer store.Close() // Agenda destruição para o final da função
+	log.Println("DEBUG: conexão com postgre estabelecida")
 
 	rabbit, err := queue.NewRabbitMQConnection(rabbit_conn)
 	if err != nil {
 		log.Fatalf("ERROR: falha ao conectar com RabbitMQ: %s\n", err)
 	}
 	defer rabbit.Close()
-
-	log.Println("DEBUG: conexão com postgre estabelecida")
 	log.Println("DEBUG: conexão com rabbit estabelecida")
 
-	handler := api.NewHandler(store, rabbit)
+	userService := services.NewUserService(store)
+	log.Println("DEBUG: User Service criado")
+
+	handler := api.NewHandler(store, rabbit, userService)
 	log.Println("DEBUG: Handler criado")
 
 	
