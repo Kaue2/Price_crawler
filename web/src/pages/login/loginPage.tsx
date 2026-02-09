@@ -7,7 +7,7 @@ function Login() {
   const [userPassword, setUserPassword] = useState("");
 
   function ConfirmLogin() {
-    if (userEmail == "") return;
+    if (userEmail == "" || !userEmail.includes("@")) return;
     if (userPassword == "") return;
 
     console.log(userEmail);
@@ -21,7 +21,7 @@ function Login() {
       <SwitchSigns option={activeTab} setOption={setActiveTab}/>
       <Form>
         <h2 className="text-3xl">Bem vindo de volta!</h2>
-        <InputForm text="exemplo@gmail.com" type="text" action={setUserEmail} />
+        <InputForm text="exemplo@gmail.com" type="email" action={setUserEmail} />
         <InputForm text="password" type="password" action={setUserPassword} />
         <BtnForm text="Sign In" action={ConfirmLogin} />
       </Form>

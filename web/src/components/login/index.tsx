@@ -33,7 +33,7 @@ export function SwitchSigns({option, setOption}: SwitchSignsProps) {
 
 interface InputOptions{
   text: string;
-  type: "text" | "password";
+  type: "text" | "password" | "email";
   action: (val: string) => void;
 }
 
