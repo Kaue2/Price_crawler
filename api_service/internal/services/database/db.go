@@ -11,7 +11,7 @@ import (
 )
 
 type Store struct {
-	db *sql.DB
+	Db *sql.DB
 }
 
 func NewStore(connString string) (*Store, error) {
@@ -25,13 +25,13 @@ func NewStore(connString string) (*Store, error) {
 		return nil, fmt.Errorf("ERROR: falha no handshake com Postgre: %w", err)
 	}
 
-	s := &Store{db: db}
+	s := &Store{Db: db}
 
 	return s, nil
 }
 
 func (s *Store) Close() {
-	s.db.Close()
+	s.Db.Close()
 }
 
 func (s *Store) GetAll() ([]models.Product, error) {
@@ -41,7 +41,7 @@ func (s *Store) GetAll() ([]models.Product, error) {
 	query := `
 					SELECT * FROM products
 	`
-	rows, err := s.db.QueryContext(ctx, query)
+	rows, err := s.Db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("ERROR: falha ao buscar pelos produtos: %w", err)
 	}
