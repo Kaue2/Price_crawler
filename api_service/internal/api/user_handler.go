@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"price-crawler-api/internal/services"
@@ -24,6 +25,11 @@ func (u *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	err := u.userService.Create(body.Email, body.PasswordPlain)
 	if err != nil {
+		if errors.Is(err, services.ErrInvalidEmail) {
+			http.Error(w, "email inválido", http.StatusBadRequest)
+			return
+		}
+
 		log.Printf("ERROR: erro ao criar usuário: %s", err)
 		http.Error(w, "Erro: não foi possível criar usuário", http.StatusInternalServerError)
 		return
