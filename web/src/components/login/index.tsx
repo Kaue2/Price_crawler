@@ -58,12 +58,14 @@ export function InputForm({ text, type, action }: InputOptions) {
 
 interface FormProps {
   children: React.ReactNode;
+  animation: string;
 }
 
-export function Form({ children }: FormProps){
+export function Form({ children, animation }: FormProps){
   return(
-    <form className="flex flex-col items-center gap-8 rounded-md
-    bg-[#F8F8F8] px-5 py-12 ">
+    <form className={`flex flex-col items-center gap-8 rounded-md
+    transform transition-all duration-500 ease-in-out
+    bg-[#F8F8F8] px-5 py-12 ${animation}`}>
       {children}      
     </form>
   )
