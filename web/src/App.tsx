@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { ToastProvider } from './contexts/ToastContext'
 import Login from './pages/login/loginPage'
 import Produtos from './components/produtos'
 import Wishlist from './components/wishlist'
@@ -9,6 +10,7 @@ import ProductDetails from './components/produto_detalhe'
 function App() {
   return (
     <>
+      <ToastProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
           
@@ -22,6 +24,7 @@ function App() {
 
           <Route path='*' element={<Navigate to="/login" />} />
         </Routes>
+      </ToastProvider>
     </>
   )
 }

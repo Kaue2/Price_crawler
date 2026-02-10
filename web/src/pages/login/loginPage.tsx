@@ -1,11 +1,13 @@
 import { AppTitle, SwitchSigns, InputForm, Form, BtnForm } from "../../components/login";
 import React, { useState } from "react";
 import { authService } from "../../services/authService";
+import { useToast } from "../../contexts/ToastContext";
 
 function Login() {
   const [activeTab, setActiveTab] = useState<"signIn" | "signUp">("signIn");
   const [userEmail, setUserEmail] = useState("");
   const [userPassword, setUserPassword] = useState("");
+  const { showToast } = useToast();
 
   const isValidEmail = (email: string) => {
     return /\S+@\S+\.\S+/.test(email);
@@ -15,6 +17,7 @@ function Login() {
     e.preventDefault();
 
     if (!isValidEmail(userEmail)) {
+      showToast("Erro: Email inválido", "error")
       return;
     }
 
@@ -24,8 +27,10 @@ function Login() {
         password_plain: userPassword
       });
     } catch (err) {
+      showToast("Erro: falha ao criar usuário", "error")
       console.error(err)
     } finally {
+      showToast("Pog deu sucesso", "success");
       console.log("Usuário criado");
     }
   }
