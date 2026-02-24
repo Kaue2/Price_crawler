@@ -1,16 +1,19 @@
 package services
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"price-crawler-api/internal/services/database"
 	"regexp"
+	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 const emailRegexPattern = `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,4}$`
+
 var emailRegex = regexp.MustCompile(emailRegexPattern)
 var ErrInvalidEmail = errors.New("ERRO: email fornecido é inválido")
 
@@ -24,16 +27,26 @@ func NewUserService(db *database.Store) *UserService {
 	}
 }
 
-type UserServiceRequestBody struct {
-	Email string `json:"email"`
+type CreateUserRequestBody struct {
+	UserName      string `json:"user-name"` 
+	Email         string `json:"email"`
 	PasswordPlain string `json:"password-plain"`
 }
 
-func validateEmail(e string) bool{
-	return  emailRegex.MatchString(e)
+type LoginRequestBody struct {
+	Email         string `json:"email"`
+	PasswordPlain string `json:"password-plain"`
 }
 
-func (s *UserService) Create(email string, plainPassword string) error {
+type LoginResponse struct {
+	Email         string `json:"email"` 
+}
+
+func validateEmail(e string) bool {
+	return emailRegex.MatchString(e)
+}
+
+func (s *UserService) Create(userName string, email string, plainPassword string) error {
 	valid := validateEmail(email)
 	if valid != true {
 		return ErrInvalidEmail
@@ -43,15 +56,44 @@ func (s *UserService) Create(email string, plainPassword string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	password_hash := string(hashedPassword)
 	id := uuid.New()
 
 	query := `
-		INSERT INTO users (id, email, password_hash)
-		VALUES ($1, $2, $3)
+		INSERT INTO users (id, user_password, email, password_hash)
+		VALUES ($1, $2, $3, $4)
 	`
-	_, err = s.db.Exec(query, id, email, password_hash)
+	_, err = s.db.Exec(query, id, userName, email, password_hash)
 
 	return err
-} 
+}
+
+func (s *UserService) Login(email string, passwordPlain string) error {
+	var response LoginResponse
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(passwordPlain), bcrypt.DefaultCost)
+
+	if err != nil {
+		return err
+	}
+
+	password_hash := string(hashedPassword)
+
+	query := `
+						SELECT * 
+						FROM users
+						WHERE email = $1
+						AND password_hash = $2
+	`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = s.db.QueryRowContext(ctx, query, email, password_hash).Scan(&response)
+
+	if err != nil {
+		return  err
+	}
+
+	return  nil
+}
