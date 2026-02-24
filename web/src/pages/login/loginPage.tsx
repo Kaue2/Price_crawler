@@ -51,7 +51,7 @@ function Login() {
     } catch (err) {
       console.log(err);
     } finally {
-      showToast("Pog deu sucesso", "success");
+      showToast("Usuário Autenticado com Sucesso!", "success");
       console.log("Usuário autenticado com sucesso!");
     }
   }
