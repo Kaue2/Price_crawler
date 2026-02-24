@@ -50,7 +50,9 @@ func (u *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 
 	err := u.userService.Login(body.Email, body.PasswordPlain)
 	if err != nil {
+		log.Printf("ERROR: falha ao efetuar login: %s", err)
 		http.Error(w, "Erro: falha ao efetuar login", http.StatusBadRequest)
+		return
 	}
 
 	w.Header().Set("content-type", "application/json")
