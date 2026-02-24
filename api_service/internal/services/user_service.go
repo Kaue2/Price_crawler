@@ -52,7 +52,7 @@ func (s *UserService) Create(userName string, email string, plainPassword string
 		return ErrInvalidEmail
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(plainPassword), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(plainPassword), bcrypt.MinCost)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (s *UserService) Create(userName string, email string, plainPassword string
 	id := uuid.New()
 
 	query := `
-		INSERT INTO users (id, user_password, email, password_hash)
+		INSERT INTO users (id, user_name, email, password_hash)
 		VALUES ($1, $2, $3, $4)
 	`
 	_, err = s.db.Exec(query, id, userName, email, password_hash)
@@ -71,7 +71,7 @@ func (s *UserService) Create(userName string, email string, plainPassword string
 
 func (s *UserService) Login(email string, passwordPlain string) error {
 	var response LoginResponse
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(passwordPlain), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(passwordPlain), bcrypt.MinCost)
 
 	if err != nil {
 		return err
